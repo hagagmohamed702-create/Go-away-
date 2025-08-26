@@ -69,6 +69,9 @@ export default function RootLayout({
               <a href="/broker-commissions" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
                 عمولات الوسطاء
               </a>
+              <a href="/simple-test" className="flex items-center rounded-lg px-4 py-2 text-green-600 hover:bg-green-50 border-t border-gray-200 mt-2">
+                🧪 اختبار النظام
+              </a>
             </nav>
           </div>
 
