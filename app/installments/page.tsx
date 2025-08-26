@@ -1,157 +1,69 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Search, DollarSign, Calendar, AlertTriangle, CheckCircle } from 'lucide-react'
-import { useToast } from '@/components/ui/use-toast'
-import { formatCurrency, formatDate } from '@/lib/utils'
 
 interface Installment {
-  id: string
+  id: number
+  contractNumber: string
+  clientName: string
   installmentNumber: number
   amount: number
   dueDate: string
   paidAmount: number
-  remainingAmount: number
-  status: 'PENDING' | 'PAID' | 'OVERDUE' | 'PARTIAL'
-  paymentDate?: string
-  contract: {
-    id: string
-    contractNumber: string
-    client: {
-      name: string
-      phone: string
-    }
-    unit: {
-      name: string
-    }
-  }
+  status: string
 }
 
 export default function InstallmentsPage() {
   const [installments, setInstallments] = useState<Installment[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('ALL')
-  const { toast } = useToast()
 
   useEffect(() => {
-    fetchInstallments()
-  }, [])
-
-  const fetchInstallments = async () => {
-    try {
-      // Mock data for now - will be replaced with actual API
-      const mockInstallments: Installment[] = [
-        {
-          id: '1',
+    setTimeout(() => {
+      setInstallments([
+        { 
+          id: 1, 
+          contractNumber: 'C-2024-001',
+          clientName: 'أحمد محمد',
           installmentNumber: 1,
-          amount: 5000,
+          amount: 33333,
           dueDate: '2024-01-15',
-          paidAmount: 5000,
-          remainingAmount: 0,
-          status: 'PAID',
-          paymentDate: '2024-01-10',
-          contract: {
-            id: '1',
-            contractNumber: 'C-2024-001',
-            client: { name: 'أحمد محمد', phone: '01234567890' },
-            unit: { name: 'شقة 101 - عمارة أ' }
-          }
+          paidAmount: 33333,
+          status: 'مدفوع'
         },
-        {
-          id: '2',
+        { 
+          id: 2, 
+          contractNumber: 'C-2024-001',
+          clientName: 'أحمد محمد',
           installmentNumber: 2,
-          amount: 5000,
+          amount: 33333,
           dueDate: '2024-02-15',
-          paidAmount: 3000,
-          remainingAmount: 2000,
-          status: 'PARTIAL',
-          contract: {
-            id: '1',
-            contractNumber: 'C-2024-001',
-            client: { name: 'أحمد محمد', phone: '01234567890' },
-            unit: { name: 'شقة 101 - عمارة أ' }
-          }
+          paidAmount: 20000,
+          status: 'مدفوع جزئياً'
         },
-        {
-          id: '3',
+        { 
+          id: 3, 
+          contractNumber: 'C-2024-001',
+          clientName: 'أحمد محمد',
           installmentNumber: 3,
-          amount: 5000,
+          amount: 33333,
           dueDate: '2024-03-15',
           paidAmount: 0,
-          remainingAmount: 5000,
-          status: 'OVERDUE',
-          contract: {
-            id: '1',
-            contractNumber: 'C-2024-001',
-            client: { name: 'أحمد محمد', phone: '01234567890' },
-            unit: { name: 'شقة 101 - عمارة أ' }
-          }
+          status: 'متأخر'
+        },
+        { 
+          id: 4, 
+          contractNumber: 'C-2024-002',
+          clientName: 'فاطمة علي',
+          installmentNumber: 1,
+          amount: 22222,
+          dueDate: '2024-01-20',
+          paidAmount: 22222,
+          status: 'مدفوع'
         }
-      ]
-      setInstallments(mockInstallments)
-    } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "فشل في تحميل بيانات الأقساط",
-        variant: "destructive"
-      })
-    } finally {
+      ])
       setLoading(false)
-    }
-  }
-
-  const filteredInstallments = installments.filter(installment => {
-    const matchesSearch = 
-      installment.contract.contractNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      installment.contract.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      installment.contract.unit.name.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = statusFilter === 'ALL' || installment.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PAID': return 'bg-green-100 text-green-800'
-      case 'PARTIAL': return 'bg-yellow-100 text-yellow-800'
-      case 'OVERDUE': return 'bg-red-100 text-red-800'
-      case 'PENDING': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'PAID': return 'مدفوع'
-      case 'PARTIAL': return 'مدفوع جزئياً'
-      case 'OVERDUE': return 'متأخر'
-      case 'PENDING': return 'في الانتظار'
-      default: return status
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'PAID': return <CheckCircle className="h-4 w-4 text-green-600" />
-      case 'OVERDUE': return <AlertTriangle className="h-4 w-4 text-red-600" />
-      default: return <Calendar className="h-4 w-4 text-blue-600" />
-    }
-  }
-
-  const stats = {
-    total: installments.length,
-    paid: installments.filter(i => i.status === 'PAID').length,
-    overdue: installments.filter(i => i.status === 'OVERDUE').length,
-    totalAmount: installments.reduce((sum, i) => sum + i.amount, 0),
-    paidAmount: installments.reduce((sum, i) => sum + i.paidAmount, 0),
-    remainingAmount: installments.reduce((sum, i) => sum + i.remainingAmount, 0)
-  }
+    }, 1000)
+  }, [])
 
   if (loading) {
     return (
@@ -164,169 +76,121 @@ export default function InstallmentsPage() {
     )
   }
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ar-EG', {
+      style: 'currency',
+      currency: 'EGP',
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ar-EG')
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'مدفوع': return 'bg-green-100 text-green-800'
+      case 'مدفوع جزئياً': return 'bg-yellow-100 text-yellow-800'
+      case 'متأخر': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const stats = {
+    total: installments.length,
+    paid: installments.filter((i) => i.status === 'مدفوع').length,
+    overdue: installments.filter((i) => i.status === 'متأخر').length,
+    totalAmount: installments.reduce((sum, i) => sum + i.amount, 0),
+    paidAmount: installments.reduce((sum, i) => sum + i.paidAmount, 0)
+  }
+
   return (
     <div className="p-6 space-y-6" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">إدارة الأقساط</h1>
-          <p className="text-muted-foreground">متابعة المدفوعات والأقساط المستحقة</p>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex items-center space-x-4 space-x-reverse">
-        <div className="relative flex-1">
-          <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="البحث برقم العقد أو اسم العميل..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-8"
-          />
-        </div>
-        <select
-          className="px-3 py-2 border rounded-md"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="ALL">جميع الحالات</option>
-          <option value="PENDING">في الانتظار</option>
-          <option value="PAID">مدفوع</option>
-          <option value="PARTIAL">مدفوع جزئياً</option>
-          <option value="OVERDUE">متأخر</option>
-        </select>
+      <div>
+        <h1 className="text-3xl font-bold mb-2">إدارة الأقساط</h1>
+        <p className="text-gray-600">متابعة المدفوعات والأقساط المستحقة</p>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الأقساط</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">مدفوعة</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.paid}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">متأخرة</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المبلغ</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {formatCurrency(stats.totalAmount)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">المدفوع</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(stats.paidAmount)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">المتبقي</CardTitle>
-            <DollarSign className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {formatCurrency(stats.remainingAmount)}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-5">
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">إجمالي الأقساط</h3>
+          <div className="text-2xl font-bold mt-2">{stats.total}</div>
+        </div>
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">مدفوعة</h3>
+          <div className="text-2xl font-bold text-green-600 mt-2">{stats.paid}</div>
+        </div>
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">متأخرة</h3>
+          <div className="text-2xl font-bold text-red-600 mt-2">{stats.overdue}</div>
+        </div>
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">إجمالي المبلغ</h3>
+          <div className="text-2xl font-bold text-blue-600 mt-2">
+            {formatCurrency(stats.totalAmount)}
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">المدفوع</h3>
+          <div className="text-2xl font-bold text-green-600 mt-2">
+            {formatCurrency(stats.paidAmount)}
+          </div>
+        </div>
       </div>
 
       {/* Installments List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>قائمة الأقساط</CardTitle>
-          <CardDescription>
-            عرض جميع الأقساط مع حالات الدفع
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredInstallments.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">لا يوجد أقساط</h3>
-              <p className="mt-1 text-sm text-gray-500">لا توجد أقساط تطابق معايير البحث</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredInstallments.map((installment) => (
-                <div key={installment.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 space-x-reverse">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        {getStatusIcon(installment.status)}
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-2 space-x-reverse">
-                          <h3 className="font-medium">
-                            {installment.contract.contractNumber} - القسط {installment.installmentNumber}
-                          </h3>
-                          <Badge className={getStatusColor(installment.status)}>
-                            {getStatusText(installment.status)}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center space-x-4 space-x-reverse text-sm text-muted-foreground mt-1">
-                          <span>{installment.contract.client.name}</span>
-                          <span>{installment.contract.unit.name}</span>
-                          <span>استحقاق: {formatDate(installment.dueDate)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-lg">{formatCurrency(installment.amount)}</p>
-                      {installment.paidAmount > 0 && (
-                        <p className="text-sm text-green-600">
-                          مدفوع: {formatCurrency(installment.paidAmount)}
-                        </p>
-                      )}
-                      {installment.remainingAmount > 0 && (
-                        <p className="text-sm text-red-600">
-                          متبقي: {formatCurrency(installment.remainingAmount)}
-                        </p>
-                      )}
-                      {installment.paymentDate && (
-                        <p className="text-xs text-muted-foreground">
-                          تاريخ الدفع: {formatDate(installment.paymentDate)}
-                        </p>
-                      )}
+      <div className="bg-white rounded-lg border shadow-sm">
+        <div className="p-6 border-b">
+          <h2 className="text-lg font-semibold">قائمة الأقساط</h2>
+          <p className="text-sm text-gray-600">عرض جميع الأقساط مع حالات الدفع</p>
+        </div>
+        <div className="p-6">
+          <div className="space-y-4">
+            {installments.map((installment) => (
+              <div key={installment.id} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-medium">
+                      {installment.contractNumber} - القسط {installment.installmentNumber}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {installment.clientName} | استحقاق: {formatDate(installment.dueDate)}
+                    </p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(installment.status)}`}>
+                    {installment.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">المبلغ المطلوب:</span>
+                    <div className="font-medium text-blue-600">{formatCurrency(installment.amount)}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">المدفوع:</span>
+                    <div className="font-medium text-green-600">{formatCurrency(installment.paidAmount)}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">المتبقي:</span>
+                    <div className="font-medium text-red-600">
+                      {formatCurrency(installment.amount - installment.paidAmount)}
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                <div className="flex justify-end space-x-2 space-x-reverse mt-3">
+                  <button className="px-3 py-1 text-sm border rounded hover:bg-gray-50">
+                    تسجيل دفعة
+                  </button>
+                  <button className="px-3 py-1 text-sm border rounded hover:bg-gray-50">
+                    عرض التفاصيل
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
