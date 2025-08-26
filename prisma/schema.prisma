@@ -1,0 +1,446 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// العملاء - Clients
+// ============================================
+model Client {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // علاقات
+  contracts    Contract[]
+  installments Installment[]
+  receipts     Receipt[]
+
+  @@index([code])
+  @@index([name])
+  @@map("clients")
+}
+
+// ============================================
+// الوحدات السكنية - Units
+// ============================================
+model Unit {
+  id           String  @id @default(cuid())
+  code         String  @unique
+  name         String?
+  buildingNo   String?
+  unitType     String  // سكني، تجاري، مدرسة، أخرى
+  totalPrice   Decimal @db.Decimal(18, 2)
+  groupType    String  // سكنية، تجارية
+  isAvailable  Boolean @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // علاقات
+  contracts     Contract[]
+  installments  Installment[]
+  unitPartners  UnitPartner[]
+
+  @@index([code])
+  @@index([unitType])
+  @@map("units")
+}
+
+// ============================================
+// العقود - Contracts
+// ============================================
+model Contract {
+  id               String   @id @default(cuid())
+  contractNo       String   @unique
+  clientId         String
+  unitId           String
+  unitPrice        Decimal  @db.Decimal(18, 2)
+  downPayment      Decimal  @db.Decimal(18, 2)
+  installmentCount Int
+  paymentType      String   @default("MONTHLY") // شهري، ربع سنوي، سنوي
+  installmentAmount Decimal @db.Decimal(18, 2) // (unitPrice - downPayment) / installmentCount
+  status           String   @default("ACTIVE") // نشط، ملغي، مكتمل
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // علاقات
+  client       Client        @relation(fields: [clientId], references: [id])
+  unit         Unit          @relation(fields: [unitId], references: [id])
+  installments Installment[]
+
+  @@index([contractNo])
+  @@index([clientId])
+  @@index([unitId])
+  @@map("contracts")
+}
+
+// ============================================
+// الأقساط - Installments
+// ============================================
+model Installment {
+  id            String    @id @default(cuid())
+  contractId    String
+  clientId      String
+  unitId        String
+  installmentNo Int
+  dueDate       DateTime
+  amount        Decimal   @db.Decimal(18, 2)
+  paidAmount    Decimal   @db.Decimal(18, 2) @default(0)
+  remainingAmount Decimal @db.Decimal(18, 2)
+  status        String    @default("PENDING") // في الانتظار، مدفوع، متأخر
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // علاقات
+  contract Contract @relation(fields: [contractId], references: [id])
+  client   Client   @relation(fields: [clientId], references: [id])
+  unit     Unit     @relation(fields: [unitId], references: [id])
+  receipts Receipt[]
+
+  @@index([dueDate])
+  @@index([status])
+  @@index([contractId])
+  @@map("installments")
+}
+
+// ============================================
+// الشركاء - Partners
+// ============================================
+model Partner {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String
+  phone       String?
+  email       String?
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // علاقات
+  unitPartners       UnitPartner[]
+  partnerGroups      PartnerGroup[]
+  wallets            Wallet[]
+  settlements        Settlement[]
+  expenses           Expense[]
+
+  @@index([code])
+  @@index([name])
+  @@map("partners")
+}
+
+// ============================================
+// مجموعات الشركاء - Partner Groups
+// ============================================
+model PartnerGroup {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // علاقات
+  partners Partner[]
+
+  @@map("partner_groups")
+}
+
+// ============================================
+// شركاء الوحدات - Unit Partners (نسب الملكية)
+// ============================================
+model UnitPartner {
+  id         String  @id @default(cuid())
+  unitId     String
+  partnerId  String
+  percentage Decimal @db.Decimal(5, 2) // نسبة الشريك في الوحدة
+  createdAt  DateTime @default(now())
+
+  // علاقات
+  unit    Unit    @relation(fields: [unitId], references: [id])
+  partner Partner @relation(fields: [partnerId], references: [id])
+
+  @@unique([unitId, partnerId])
+  @@map("unit_partners")
+}
+
+// ============================================
+// الخزائن - Cashboxes
+// ============================================
+model Cashbox {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String
+  type        String  @default("MAIN") // رئيسية، فرعية، شركاء
+  balance     Decimal @db.Decimal(18, 2) @default(0)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // علاقات
+  receipts  Receipt[]
+  expenses  Expense[]
+  transfers Transfer[] @relation("FromCashbox")
+  transfersTo Transfer[] @relation("ToCashbox")
+
+  @@index([code])
+  @@map("cashboxes")
+}
+
+// ============================================
+// محافظ الشركاء - Partner Wallets
+// ============================================
+model Wallet {
+  id        String  @id @default(cuid())
+  partnerId String
+  balance   Decimal @db.Decimal(18, 2) @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // علاقات
+  partner Partner @relation(fields: [partnerId], references: [id])
+
+  @@unique([partnerId])
+  @@map("wallets")
+}
+
+// ============================================
+// سندات القبض - Receipts
+// ============================================
+model Receipt {
+  id            String    @id @default(cuid())
+  receiptNo     String    @unique
+  clientId      String
+  installmentId String?
+  cashboxId     String
+  amount        Decimal   @db.Decimal(18, 2)
+  date          DateTime
+  description   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // علاقات
+  client      Client       @relation(fields: [clientId], references: [id])
+  installment Installment? @relation(fields: [installmentId], references: [id])
+  cashbox     Cashbox      @relation(fields: [cashboxId], references: [id])
+
+  @@index([receiptNo])
+  @@index([date])
+  @@map("receipts")
+}
+
+// ============================================
+// سندات الصرف - Expenses
+// ============================================
+model Expense {
+  id          String   @id @default(cuid())
+  expenseNo   String   @unique
+  supplierId  String?
+  projectId   String?
+  partnerId   String?
+  cashboxId   String
+  amount      Decimal  @db.Decimal(18, 2)
+  date        DateTime
+  type        String   // مواد، عمالة، خدمات، أخرى
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // علاقات
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+  project  Project?  @relation(fields: [projectId], references: [id])
+  partner  Partner?  @relation(fields: [partnerId], references: [id])
+  cashbox  Cashbox   @relation(fields: [cashboxId], references: [id])
+
+  @@index([expenseNo])
+  @@index([date])
+  @@map("expenses")
+}
+
+// ============================================
+// الموردين - Suppliers
+// ============================================
+model Supplier {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // علاقات
+  expenses  Expense[]
+  materials Material[]
+
+  @@index([code])
+  @@index([name])
+  @@map("suppliers")
+}
+
+// ============================================
+// المشاريع (المقاولات) - Projects
+// ============================================
+model Project {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  name        String
+  type        String    // إنشاء، صيانة، تجديد
+  startDate   DateTime
+  endDate     DateTime?
+  status      String    @default("IN_PROGRESS") // قيد التنفيذ، مكتمل، مؤجل
+  budget      Decimal?  @db.Decimal(18, 2)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // علاقات
+  expenses      Expense[]
+  materialMoves MaterialMove[]
+
+  @@index([code])
+  @@index([status])
+  @@map("projects")
+}
+
+// ============================================
+// المواد - Materials
+// ============================================
+model Material {
+  id            String  @id @default(cuid())
+  code          String  @unique
+  name          String
+  unit          String  // متر، كجم، صندوق، قطعة
+  unitPrice     Decimal @db.Decimal(18, 2)
+  currentQty    Decimal @db.Decimal(18, 2) @default(0)
+  minQty        Decimal @db.Decimal(18, 2) @default(0)
+  supplierId    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // علاقات
+  supplier      Supplier?     @relation(fields: [supplierId], references: [id])
+  materialMoves MaterialMove[]
+
+  @@index([code])
+  @@index([name])
+  @@map("materials")
+}
+
+// ============================================
+// حركات المواد - Material Moves
+// ============================================
+model MaterialMove {
+  id         String  @id @default(cuid())
+  materialId String
+  projectId  String?
+  type       String  // وارد، صادر، تحويل
+  quantity   Decimal @db.Decimal(18, 2)
+  price      Decimal @db.Decimal(18, 2)
+  totalCost  Decimal @db.Decimal(18, 2)
+  date       DateTime
+  reference  String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // علاقات
+  material Material @relation(fields: [materialId], references: [id])
+  project  Project? @relation(fields: [projectId], references: [id])
+
+  @@index([date])
+  @@index([materialId])
+  @@map("material_moves")
+}
+
+// ============================================
+// التحويلات بين الخزائن - Transfers
+// ============================================
+model Transfer {
+  id            String   @id @default(cuid())
+  transferNo    String   @unique
+  fromCashboxId String
+  toCashboxId   String
+  amount        Decimal  @db.Decimal(18, 2)
+  date          DateTime
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // علاقات
+  fromCashbox Cashbox @relation("FromCashbox", fields: [fromCashboxId], references: [id])
+  toCashbox   Cashbox @relation("ToCashbox", fields: [toCashboxId], references: [id])
+
+  @@index([transferNo])
+  @@index([date])
+  @@map("transfers")
+}
+
+// ============================================
+// التسويات بين الشركاء - Settlements
+// ============================================
+model Settlement {
+  id           String   @id @default(cuid())
+  settlementNo String   @unique
+  partnerId    String
+  amount       Decimal  @db.Decimal(18, 2)
+  type         String   // دائن، مدين
+  date         DateTime
+  description  String?
+  isCompleted  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // علاقات
+  partner Partner @relation(fields: [partnerId], references: [id])
+
+  @@index([settlementNo])
+  @@index([date])
+  @@map("settlements")
+}
+
+// ============================================
+// الإشعارات - Notifications
+// ============================================
+model Notification {
+  id        String    @id @default(cuid())
+  type      String    // تأخر قسط، اقتراب موعد، تجاوز ميزانية، نقص مخزون
+  title     String
+  message   String
+  severity  String    @default("INFO") // معلومات، تحذير، خطر
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([type])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================
+// إعدادات النظام - System Settings
+// ============================================
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
+}
