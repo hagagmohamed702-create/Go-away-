@@ -42,6 +42,9 @@ export default function RootLayout({
               <a href="/partners" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
                 الشركاء
               </a>
+              <a href="/partner-groups" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                مجموعات الشركاء
+              </a>
               <a href="/cashboxes" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
                 الخزائن
               </a>
@@ -53,6 +56,12 @@ export default function RootLayout({
               </a>
               <a href="/reports" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
                 التقارير
+              </a>
+              <a href="/settlements" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                التسويات
+              </a>
+              <a href="/notifications" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                الإشعارات
               </a>
             </nav>
           </div>
