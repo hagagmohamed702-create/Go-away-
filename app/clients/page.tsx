@@ -101,14 +101,25 @@ export default function ClientsPage() {
       
       console.log('Add response status:', response.status)
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      // Get response text first to handle parsing errors
+      const responseText = await response.text()
+      console.log('Raw response:', responseText)
+      
+      let data
+      try {
+        data = JSON.parse(responseText)
+        console.log('Add response data:', data)
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError)
+        throw new Error(`خطأ في تحليل استجابة الخادم: ${responseText}`)
       }
       
-      const data = await response.json()
-      console.log('Add response data:', data)
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`)
+      }
       
       if (data.success) {
+        console.log('✅ Client added successfully:', data.data)
         setShowAddModal(false)
         setFormData({
           name: '',
@@ -117,9 +128,11 @@ export default function ClientsPage() {
           address: '',
           nationalId: ''
         })
+        // Refresh the clients list
         await fetchClients()
         alert('تم إضافة العميل بنجاح!')
       } else {
+        console.error('❌ Failed to add client:', data.error)
         setError(data.error || 'خطأ في إضافة العميل')
       }
     } catch (err) {

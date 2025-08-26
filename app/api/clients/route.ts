@@ -128,10 +128,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('POST /api/clients called')
+    console.log('🚀 POST /api/clients called')
     
     const body = await request.json()
-    console.log('Request body:', body)
+    console.log('📋 Request body:', body)
     
     // Validate required fields
     if (!body.name || !body.phone) {
@@ -171,13 +171,18 @@ export async function POST(request: NextRequest) {
     
     mockClients.push(newClient)
     
-    console.log('Created new client:', newClient)
+    console.log('✅ Created new client:', newClient)
+    console.log('📊 Total clients now:', mockClients.length)
     
-    return NextResponse.json({
+    const response = {
       success: true,
       data: newClient,
       message: 'تم إضافة العميل بنجاح'
-    }, { status: 201 })
+    }
+    
+    console.log('📤 Sending response:', response)
+    
+    return NextResponse.json(response, { status: 201 })
   } catch (error) {
     console.error('POST /api/clients error:', error)
     return NextResponse.json(
