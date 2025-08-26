@@ -53,7 +53,7 @@ export default function TestClientPage() {
       
     } catch (error) {
       console.error('💥 Network error:', error)
-      setResult(`💥 خطأ في الشبكة: ${error.message}`)
+      setResult(`💥 خطأ في الشبكة: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setLoading(false)
     }
@@ -73,7 +73,7 @@ export default function TestClientPage() {
         setResult(`❌ فشل في جلب العملاء: ${data.error}`)
       }
     } catch (error) {
-      setResult(`💥 خطأ: ${error.message}`)
+      setResult(`💥 خطأ: ${error instanceof Error ? error.message : String(error)}`)
     } finally {
       setLoading(false)
     }
