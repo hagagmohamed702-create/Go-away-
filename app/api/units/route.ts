@@ -1,47 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { z } from 'zod'
-
-const UnitSchema = z.object({
-  code: z.string().min(1, 'رقم الوحدة مطلوب'),
-  name: z.string().min(1, 'اسم الوحدة مطلوب'),
-  buildingNo: z.string().min(1, 'رقم العمارة مطلوب'),
-  unitType: z.string().min(1, 'نوع الوحدة مطلوب'),
-  totalPrice: z.number().positive('السعر يجب أن يكون أكبر من صفر'),
-  groupType: z.string().min(1, 'نوع المجموعة مطلوب'),
-  status: z.enum(['AVAILABLE', 'SOLD', 'RESERVED']).optional()
-})
 
 export async function GET() {
   try {
-    const units = await prisma.unit.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        contracts: {
-          select: {
-            id: true,
-            client: {
-              select: { name: true }
-            }
-          }
-        }
-      }
-    })
+    // Mock data for now
+    const units = [
+      { id: '1', code: 'A101', name: 'شقة 101 - عمارة أ', buildingNo: 'أ', unitType: 'سكني', totalPrice: 500000, groupType: 'سكنية', status: 'AVAILABLE' },
+      { id: '2', code: 'A102', name: 'شقة 102 - عمارة أ', buildingNo: 'أ', unitType: 'سكني', totalPrice: 550000, groupType: 'سكنية', status: 'SOLD' },
+      { id: '3', code: 'B001', name: 'محل 1 - عمارة ب', buildingNo: 'ب', unitType: 'تجاري', totalPrice: 800000, groupType: 'تجارية', status: 'AVAILABLE' }
+    ]
 
     return NextResponse.json({
       success: true,
-      units: units.map(unit => ({
-        id: unit.id,
-        code: unit.code,
-        name: unit.name,
-        buildingNo: unit.buildingNo,
-        unitType: unit.unitType,
-        totalPrice: unit.totalPrice.toNumber(),
-        groupType: unit.groupType,
-        status: unit.isAvailable ? 'AVAILABLE' : 'SOLD', // Convert isAvailable to status
-        createdAt: unit.createdAt.toISOString(),
-        contracts: unit.contracts
-      }))
+      units
     })
   } catch (error) {
     console.error('Error fetching units:', error)
@@ -55,54 +25,19 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const validatedData = UnitSchema.parse(body)
-
-    // Check if unit code already exists
-    const existingUnit = await prisma.unit.findUnique({
-      where: { code: validatedData.code }
-    })
-
-    if (existingUnit) {
-      return NextResponse.json({
-        success: false,
-        error: 'رقم الوحدة موجود بالفعل'
-      }, { status: 400 })
+    
+    // Mock successful creation
+    const newUnit = {
+      id: Date.now().toString(),
+      ...body,
+      createdAt: new Date().toISOString()
     }
-
-    const unit = await prisma.unit.create({
-      data: {
-        code: validatedData.code,
-        name: validatedData.name,
-        buildingNo: validatedData.buildingNo,
-        unitType: validatedData.unitType,
-        totalPrice: validatedData.totalPrice,
-        groupType: validatedData.groupType,
-        isAvailable: validatedData.status !== 'SOLD' // Convert status to isAvailable
-      }
-    })
 
     return NextResponse.json({
       success: true,
-      unit: {
-        id: unit.id,
-        code: unit.code,
-        name: unit.name,
-        buildingNo: unit.buildingNo,
-        unitType: unit.unitType,
-        totalPrice: unit.totalPrice.toNumber(),
-        groupType: unit.groupType,
-        status: unit.isAvailable ? 'AVAILABLE' : 'SOLD',
-        createdAt: unit.createdAt.toISOString()
-      }
+      unit: newUnit
     })
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        success: false,
-        error: error.errors[0].message
-      }, { status: 400 })
-    }
-
     console.error('Error creating unit:', error)
     return NextResponse.json({
       success: false,
