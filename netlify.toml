@@ -4,7 +4,9 @@
 
 [build.environment]
   NODE_VERSION = "18"
-  SKIP_ENV_VALIDATION = "true"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [[redirects]]
   from = "/api/*"
@@ -15,14 +17,6 @@
   from = "/*"
   to = "/index.html"
   status = 200
-
-[functions]
-  directory = ".netlify/functions"
-  node_bundler = "esbuild"
-
-[dev]
-  command = "npm run dev"
-  port = 3000
 
 [[headers]]
   for = "/api/*"
