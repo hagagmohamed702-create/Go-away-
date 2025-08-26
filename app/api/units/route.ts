@@ -38,7 +38,7 @@ export async function GET() {
         unitType: unit.unitType,
         totalPrice: unit.totalPrice.toNumber(),
         groupType: unit.groupType,
-        status: unit.status,
+        status: unit.isAvailable ? 'AVAILABLE' : 'SOLD', // Convert isAvailable to status
         createdAt: unit.createdAt.toISOString(),
         contracts: unit.contracts
       }))
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         unitType: validatedData.unitType,
         totalPrice: validatedData.totalPrice,
         groupType: validatedData.groupType,
-        status: validatedData.status || 'AVAILABLE'
+        isAvailable: validatedData.status !== 'SOLD' // Convert status to isAvailable
       }
     })
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
         unitType: unit.unitType,
         totalPrice: unit.totalPrice.toNumber(),
         groupType: unit.groupType,
-        status: unit.status,
+        status: unit.isAvailable ? 'AVAILABLE' : 'SOLD',
         createdAt: unit.createdAt.toISOString()
       }
     })
