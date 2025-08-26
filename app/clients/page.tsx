@@ -21,6 +21,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -33,16 +34,33 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/clients')
+      setError('')
+      
+      console.log('Fetching clients...')
+      const response = await fetch('/api/clients', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      console.log('Response status:', response.status)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
       const data = await response.json()
+      console.log('Received data:', data)
       
       if (data.success) {
-        setClients(data.data)
+        setClients(data.data || [])
       } else {
-        setError(data.error)
+        setError(data.error || 'خطأ في جلب البيانات')
       }
     } catch (err) {
-      setError('خطأ في جلب بيانات العملاء')
+      console.error('Error fetching clients:', err)
+      setError('خطأ في الاتصال بالخادم. يرجى التأكد من تشغيل الخادم.')
     } finally {
       setLoading(false)
     }
@@ -54,19 +72,41 @@ export default function ClientsPage() {
 
   // Add new client
   const handleAddClient = async () => {
+    if (saving) return
+    
     try {
-      if (!formData.name.trim() || !formData.phone.trim()) {
-        setError('يرجى إدخال الاسم ورقم الهاتف على الأقل')
+      setSaving(true)
+      setError('')
+      
+      // Validation
+      if (!formData.name.trim()) {
+        setError('يرجى إدخال اسم العميل')
+        return
+      }
+      
+      if (!formData.phone.trim()) {
+        setError('يرجى إدخال رقم الهاتف')
         return
       }
 
+      console.log('Adding client:', formData)
+      
       const response = await fetch('/api/clients', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(formData)
       })
       
+      console.log('Add response status:', response.status)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
       const data = await response.json()
+      console.log('Add response data:', data)
       
       if (data.success) {
         setShowAddModal(false)
@@ -77,12 +117,16 @@ export default function ClientsPage() {
           address: '',
           nationalId: ''
         })
-        fetchClients()
+        await fetchClients()
+        alert('تم إضافة العميل بنجاح!')
       } else {
-        setError(data.error)
+        setError(data.error || 'خطأ في إضافة العميل')
       }
     } catch (err) {
-      setError('خطأ في إضافة العميل')
+      console.error('Error adding client:', err)
+      setError('خطأ في إضافة العميل. يرجى المحاولة مرة أخرى.')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -98,14 +142,19 @@ export default function ClientsPage() {
         })
       })
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
       const data = await response.json()
       
       if (data.success) {
         fetchClients()
       } else {
-        setError(data.error)
+        setError(data.error || 'خطأ في تحديث حالة العميل')
       }
     } catch (err) {
+      console.error('Error updating client:', err)
       setError('خطأ في تحديث حالة العميل')
     }
   }
@@ -184,6 +233,13 @@ export default function ClientsPage() {
           {clients.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               لا توجد عملاء مسجلين حتى الآن
+              <br />
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="mt-2 text-blue-600 hover:text-blue-800 underline"
+              >
+                إضافة أول عميل
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -207,7 +263,9 @@ export default function ClientsPage() {
                       <td className="py-3 px-4">
                         <div>
                           <div className="font-medium text-gray-900">{client.name}</div>
-                          <div className="text-sm text-gray-500">هوية: {client.nationalId}</div>
+                          {client.nationalId && (
+                            <div className="text-sm text-gray-500">هوية: {client.nationalId}</div>
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4 text-gray-900">{client.phone}</td>
@@ -259,8 +317,12 @@ export default function ClientsPage() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-900">إضافة عميل جديد</h3>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false)
+                  setError('')
+                }}
                 className="text-gray-400 hover:text-gray-600"
+                disabled={saving}
               >
                 ✕
               </button>
@@ -277,6 +339,7 @@ export default function ClientsPage() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="أدخل الاسم الكامل"
+                  disabled={saving}
                 />
               </div>
 
@@ -291,6 +354,7 @@ export default function ClientsPage() {
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="05xxxxxxxx"
+                    disabled={saving}
                   />
                 </div>
 
@@ -304,6 +368,7 @@ export default function ClientsPage() {
                     onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="1xxxxxxxxx"
+                    disabled={saving}
                   />
                 </div>
               </div>
@@ -318,6 +383,7 @@ export default function ClientsPage() {
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="client@example.com"
+                  disabled={saving}
                 />
               </div>
 
@@ -331,22 +397,28 @@ export default function ClientsPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   rows={3}
                   placeholder="أدخل العنوان"
+                  disabled={saving}
                 />
               </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false)
+                  setError('')
+                }}
                 className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={saving}
               >
                 إلغاء
               </button>
               <button
                 onClick={handleAddClient}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={saving}
               >
-                إضافة العميل
+                {saving ? 'جاري الإضافة...' : 'إضافة العميل'}
               </button>
             </div>
           </div>
