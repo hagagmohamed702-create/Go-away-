@@ -39,6 +39,21 @@ export default function RootLayout({
               <a href="/installments" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
                 الأقساط
               </a>
+              <a href="/partners" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                الشركاء
+              </a>
+              <a href="/cashboxes" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                الخزائن
+              </a>
+              <a href="/receipts" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                السندات
+              </a>
+              <a href="/projects" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                المشاريع
+              </a>
+              <a href="/reports" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                التقارير
+              </a>
             </nav>
           </div>
 
