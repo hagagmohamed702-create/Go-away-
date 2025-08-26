@@ -18,6 +18,7 @@ interface Partner {
 export default function PartnersPage() {
   const [partners, setPartners] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
   const [newPartner, setNewPartner] = useState({
     name: '',
@@ -27,27 +28,49 @@ export default function PartnersPage() {
     totalInvestment: ''
   })
 
-  useEffect(() => {
-    fetchPartners()
-  }, [])
-
+  // Fetch partners
   const fetchPartners = async () => {
     try {
+      setLoading(true)
+      setError('')
       const response = await fetch('/api/partners')
       const data = await response.json()
+      
       if (data.success) {
-        setPartners(data.data)
+        setPartners(data.data || [])
+      } else {
+        setError(data.error || 'خطأ في جلب البيانات')
       }
-    } catch (error) {
-      console.error('Error fetching partners:', error)
+    } catch (err) {
+      console.error('Error fetching partners:', err)
+      setError('خطأ في الاتصال بالخادم')
     } finally {
       setLoading(false)
     }
   }
 
+  useEffect(() => {
+    fetchPartners()
+  }, [])
+
+  // Add new partner
   const handleAddPartner = async (e: React.FormEvent) => {
     e.preventDefault()
+    
     try {
+      setError('')
+      
+      // Validation
+      if (!newPartner.name.trim()) {
+        setError('يرجى إدخال اسم الشريك')
+        return
+      }
+      
+      if (!newPartner.phone.trim()) {
+        setError('يرجى إدخال رقم الهاتف')
+        return
+      }
+
       const response = await fetch('/api/partners', {
         method: 'POST',
         headers: {
@@ -55,14 +78,16 @@ export default function PartnersPage() {
         },
         body: JSON.stringify({
           name: newPartner.name,
-          sharePercentage: parseFloat(newPartner.sharePercentage),
+          sharePercentage: parseFloat(newPartner.sharePercentage) || 0,
           phone: newPartner.phone,
           email: newPartner.email,
-          totalInvestment: parseFloat(newPartner.totalInvestment)
+          totalInvestment: parseFloat(newPartner.totalInvestment) || 0
         }),
       })
 
-      if (response.ok) {
+      const result = await response.json()
+
+      if (result.success) {
         await fetchPartners()
         setShowAddForm(false)
         setNewPartner({
@@ -73,243 +98,259 @@ export default function PartnersPage() {
           totalInvestment: ''
         })
         alert('تم إضافة الشريك بنجاح!')
+      } else {
+        setError(result.error || 'خطأ في إضافة الشريك')
       }
-    } catch (error) {
-      console.error('Error adding partner:', error)
-      alert('حدث خطأ في إضافة الشريك')
+    } catch (err) {
+      console.error('Error adding partner:', err)
+      setError('خطأ في الاتصال بالخادم')
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-EG', {
-      style: 'currency',
-      currency: 'EGP',
-      minimumFractionDigits: 0,
-    }).format(amount)
-  }
+  // Calculate stats
+  const totalInvestment = partners.reduce((sum, partner) => sum + partner.totalInvestment, 0)
+  const totalReturns = partners.reduce((sum, partner) => sum + partner.totalReturns, 0)
+  const activePartners = partners.filter(p => p.status === 'نشط').length
 
   if (loading) {
     return (
-      <div className="p-6 flex justify-center items-center min-h-64">
-        <div className="text-lg text-gray-600">جاري تحميل بيانات الشركاء...</div>
+      <div className="p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="p-6 space-y-6" dir="rtl">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">إدارة الشركاء</h1>
-          <p className="text-gray-600">إدارة الشركاء ومحافظهم المالية والتسويات</p>
+          <h1 className="text-3xl font-bold mb-2">إدارة الشركاء</h1>
+          <p className="text-gray-600">إدارة شركاء الشركة ونسب مشاركتهم</p>
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
         >
           إضافة شريك جديد
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">إجمالي الشركاء</p>
-              <p className="text-2xl font-bold text-gray-900">{partners.length}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+          <button 
+            onClick={() => setError('')}
+            className="float-left text-red-500 hover:text-red-700"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">إجمالي الشركاء</h3>
+          <div className="text-2xl font-bold mt-2">{partners.length}</div>
+        </div>
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">الشركاء النشطون</h3>
+          <div className="text-2xl font-bold text-green-600 mt-2">{activePartners}</div>
+        </div>
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">إجمالي الاستثمارات</h3>
+          <div className="text-2xl font-bold text-blue-600 mt-2">
+            {totalInvestment.toLocaleString()} ر.س
           </div>
         </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">إجمالي المحافظ</p>
-              <p className="text-2xl font-bold text-green-600">
-                {formatCurrency(partners.reduce((sum, p) => sum + p.walletBalance, 0))}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">إجمالي الاستثمارات</p>
-              <p className="text-2xl font-bold text-purple-600">
-                {formatCurrency(partners.reduce((sum, p) => sum + p.totalInvestment, 0))}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">إجمالي العوائد</p>
-              <p className="text-2xl font-bold text-orange-600">
-                {formatCurrency(partners.reduce((sum, p) => sum + p.totalReturns, 0))}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
-            </div>
+        <div className="bg-white p-6 rounded-lg border shadow-sm">
+          <h3 className="text-sm font-medium text-gray-500">إجمالي العوائد</h3>
+          <div className="text-2xl font-bold text-purple-600 mt-2">
+            {totalReturns.toLocaleString()} ر.س
           </div>
         </div>
       </div>
 
-      {/* Add Partner Form Modal */}
+      {/* Partners List */}
+      <div className="bg-white rounded-lg border shadow-sm">
+        <div className="p-6 border-b">
+          <h2 className="text-lg font-semibold">قائمة الشركاء</h2>
+          <p className="text-sm text-gray-600">عرض جميع شركاء الشركة</p>
+        </div>
+        <div className="p-6">
+          {partners.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              لا توجد شركاء مسجلين حتى الآن
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b">
+                  <tr>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">الاسم</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">نسبة المشاركة</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">رصيد المحفظة</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">الهاتف</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">البريد الإلكتروني</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">إجمالي الاستثمار</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">العوائد</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">الحالة</th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-900">تاريخ الانضمام</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {partners.map((partner) => (
+                    <tr key={partner.id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 font-medium text-gray-900">{partner.name}</td>
+                      <td className="py-3 px-4 text-gray-900">{partner.sharePercentage}%</td>
+                      <td className="py-3 px-4 text-gray-900">
+                        {partner.walletBalance.toLocaleString()} ر.س
+                      </td>
+                      <td className="py-3 px-4 text-gray-900">{partner.phone}</td>
+                      <td className="py-3 px-4 text-gray-900">{partner.email}</td>
+                      <td className="py-3 px-4 text-gray-900">
+                        {partner.totalInvestment.toLocaleString()} ر.س
+                      </td>
+                      <td className="py-3 px-4 text-green-600 font-semibold">
+                        {partner.totalReturns.toLocaleString()} ر.س
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          partner.status === 'نشط'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {partner.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-gray-900">
+                        {new Date(partner.joinDate).toLocaleDateString('ar-SA')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add Partner Modal */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-xl font-bold mb-4">إضافة شريك جديد</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">إضافة شريك جديد</h3>
+              <button
+                onClick={() => {
+                  setShowAddForm(false)
+                  setError('')
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
             <form onSubmit={handleAddPartner} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">اسم الشريك</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  اسم الشريك *
+                </label>
                 <input
                   type="text"
                   value={newPartner.name}
                   onChange={(e) => setNewPartner({ ...newPartner, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="أدخل اسم الشريك"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">نسبة المشاركة (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={newPartner.sharePercentage}
-                  onChange={(e) => setNewPartner({ ...newPartner, sharePercentage: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  required
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    نسبة المشاركة (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={newPartner.sharePercentage}
+                    onChange={(e) => setNewPartner({ ...newPartner, sharePercentage: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="25.5"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    رقم الهاتف *
+                  </label>
+                  <input
+                    type="tel"
+                    value={newPartner.phone}
+                    onChange={(e) => setNewPartner({ ...newPartner, phone: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="05xxxxxxxx"
+                    required
+                  />
+                </div>
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
-                <input
-                  type="tel"
-                  value={newPartner.phone}
-                  onChange={(e) => setNewPartner({ ...newPartner, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  البريد الإلكتروني
+                </label>
                 <input
                   type="email"
                   value={newPartner.email}
                   onChange={(e) => setNewPartner({ ...newPartner, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="partner@example.com"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">قيمة الاستثمار الأولي</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  إجمالي الاستثمار (ر.س)
+                </label>
                 <input
                   type="number"
+                  min="0"
                   value={newPartner.totalInvestment}
                   onChange={(e) => setNewPartner({ ...newPartner, totalInvestment: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="1000000"
                 />
               </div>
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-                >
-                  إضافة
-                </button>
+
+              <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowAddForm(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-400"
+                  onClick={() => {
+                    setShowAddForm(false)
+                    setError('')
+                  }}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  إضافة الشريك
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      {/* Partners Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">قائمة الشركاء</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الشريك</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">نسبة المشاركة</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">رصيد المحفظة</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">إجمالي الاستثمار</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">إجمالي العوائد</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الحالة</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">تاريخ الانضمام</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {partners.map((partner) => (
-                <tr key={partner.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{partner.name}</div>
-                      <div className="text-sm text-gray-500">{partner.phone}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-blue-600">{partner.sharePercentage}%</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-green-600">
-                      {formatCurrency(partner.walletBalance)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-900">
-                      {formatCurrency(partner.totalInvestment)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-orange-600">
-                      {formatCurrency(partner.totalReturns)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      {partner.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {new Date(partner.joinDate).toLocaleDateString('ar-EG')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   )
 }
