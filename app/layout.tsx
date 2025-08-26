@@ -66,6 +66,9 @@ export default function RootLayout({
               <a href="/notifications" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
                 الإشعارات
               </a>
+              <a href="/broker-commissions" className="flex items-center rounded-lg px-4 py-2 text-gray-700 hover:bg-gray-100">
+                عمولات الوسطاء
+              </a>
             </nav>
           </div>
 
